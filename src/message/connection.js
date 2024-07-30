@@ -1,15 +1,15 @@
-const BrowserWebSocket = globalThis.WebSocket || globalThis.MozWebSocket
-const utils = require('../utils/utils')
-const NodeWebSocket = utils.isNode ? require('ws') : null
-const messageParser = require('./message-parser')
-const messageBuilder = require('./message-builder')
-const C = require('../constants/constants')
-const pkg = require('../../package.json')
-const xxhash = require('xxhash-wasm')
-const FixedQueue = require('../utils/fixed-queue')
-const Emitter = require('component-emitter2')
+import * as utils from '../utils/utils.js'
+import * as messageParser from './message-parser.js'
+import * as messageBuilder from './message-builder.js'
+import * as C from '../constants/constants.js'
+import xxhash from 'xxhash-wasm'
+import FixedQueue from '../utils/fixed-queue.js'
+import Emitter from 'component-emitter2'
 
-const Connection = function (client, url, options) {
+const NodeWebSocket = utils.isNode ? await import('ws').then((x) => x.default) : null
+const BrowserWebSocket = globalThis.WebSocket || globalThis.MozWebSocket
+
+export default function Connection(client, url, options) {
   this._client = client
   this._options = options
   this._logger = options.logger
@@ -166,7 +166,7 @@ Connection.prototype._sendAuthParams = function () {
   this._setState(C.CONNECTION_STATE.AUTHENTICATING)
   const authMessage = messageBuilder.getMsg(C.TOPIC.AUTH, C.ACTIONS.REQUEST, [
     this._authParams,
-    pkg.version,
+    '26.0.0',
     utils.isNode
       ? `Node/${process.version}`
       : globalThis.navigator && globalThis.navigator.userAgent,
@@ -365,5 +365,3 @@ Connection.prototype._clearReconnect = function () {
   }
   this._reconnectionAttempt = 0
 }
-
-module.exports = Connection

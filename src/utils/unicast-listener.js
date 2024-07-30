@@ -21,7 +21,7 @@ const PIPE = rxjs.pipe(
   rx.distinctUntilChanged(),
 )
 
-class Listener {
+export default class Listener {
   constructor(topic, pattern, callback, handler, opts) {
     if (opts.recursive) {
       throw new Error('invalid argument: recursive')
@@ -126,5 +126,3 @@ class Listener {
     this._connection.sendMsg(this._topic, C.ACTIONS.UNLISTEN, [this._pattern])
   }
 }
-
-export default Listener

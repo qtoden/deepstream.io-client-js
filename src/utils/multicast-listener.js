@@ -1,7 +1,7 @@
 import * as C from '../constants/constants.js'
 import rxjs from 'rxjs'
 
-class Listener {
+export default class Listener {
   constructor(topic, pattern, callback, handler, { recursive = false, stringify = null } = {}) {
     this._topic = topic
     this._pattern = pattern
@@ -228,5 +228,3 @@ class Listener {
     this._subscriptions.clear()
   }
 }
-
-export default Listener
