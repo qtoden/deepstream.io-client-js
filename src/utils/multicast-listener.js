@@ -101,7 +101,7 @@ export default class Listener {
         this._connection.sendMsg(
           this._topic,
           accepted ? C.ACTIONS.LISTEN_ACCEPT : C.ACTIONS.LISTEN_REJECT,
-          [this._pattern, provider.key],
+          [this._pattern, provider.name],
         )
 
         provider.version = null
