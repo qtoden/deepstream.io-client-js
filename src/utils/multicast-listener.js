@@ -68,7 +68,7 @@ export default class Listener {
         if (this.connected && provider.accepted) {
           this._connection.sendMsg(this._topic, C.ACTIONS.LISTEN_REJECT, [
             this._pattern,
-            provider.key,
+            provider.name,
           ])
         }
 
@@ -157,7 +157,7 @@ export default class Listener {
             if (provider.version !== version) {
               provider.version = version
               this._connection.sendMsg(C.TOPIC.RECORD, C.ACTIONS.UPDATE, [
-                provider.key,
+                provider.name,
                 version,
                 body,
               ])
