@@ -1,20 +1,19 @@
 import jsonPath from '@nxtedition/json-path'
 import * as utils from '../utils/utils.js'
 import * as C from '../constants/constants.js'
-import messageParser from '../message/message-parser.js'
+import * as messageParser from '../message/message-parser.js'
 import xuid from 'xuid'
 import invariant from 'invariant'
 import cloneDeep from 'lodash.clonedeep'
 import * as timers from '../utils/timers.js'
 
-export default class Record {
+class Record {
   static STATE = C.RECORD_STATE
 
   constructor(name, handler) {
     const connection = handler._connection
 
     this._handler = handler
-
     this._name = name
     this._version = ''
     this._data = jsonPath.EMPTY
@@ -22,6 +21,7 @@ export default class Record {
     this._refs = 0
     this._subscriptions = []
     this._emitting = false
+
     /** @type Map? */ this._updating = null
     /** @type Array? */ this._patching = null
     this._subscribed = connection.sendMsg(C.TOPIC.RECORD, C.ACTIONS.SUBSCRIBE, [this._name])
@@ -389,7 +389,7 @@ export default class Record {
     this._version = nextVersion
   }
 
-  _onUpdate([, version, data, hasProvider]) {
+  _onUpdate([, version, data]) {
     const prevData = this._data
     const prevVersion = this._version
     const prevState = this._state
@@ -422,9 +422,7 @@ export default class Record {
       this._onPatching(false)
     }
 
-    if (this._state < C.RECORD_STATE.PROVIDER && hasProvider === 'T') {
-      this._state = C.RECORD_STATE.PROVIDER
-    } else if (this._state < C.RECORD_STATE.SERVER) {
+    if (this._state < C.RECORD_STATE.SERVER) {
       this._state = this._version.charAt(0) === 'I' ? C.RECORD_STATE.STALE : C.RECORD_STATE.SERVER
     }
 
@@ -573,3 +571,5 @@ Object.defineProperty(Record.prototype, 'hasProvider', {
     return this.state >= C.RECORD_STATE.PROVIDER
   },
 })
+
+export default Record

@@ -1,5 +1,5 @@
 import * as C from '../constants/constants.js'
-import * as rxjs from 'rxjs'
+import rxjs from 'rxjs'
 
 class Listener {
   constructor(topic, pattern, callback, handler, { recursive = false, stringify = null } = {}) {
@@ -68,7 +68,7 @@ class Listener {
         if (this.connected && provider.accepted) {
           this._connection.sendMsg(this._topic, C.ACTIONS.LISTEN_REJECT, [
             this._pattern,
-            provider.name,
+            provider.key,
           ])
         }
 
@@ -77,7 +77,7 @@ class Listener {
         provider.accepted = false
         provider.sending = false
 
-        globalThis.clearTimeout(provider.timeout)
+        clearTimeout(provider.timeout)
         provider.timeout = null
 
         provider.patternSubscription?.unsubscribe()
@@ -101,7 +101,7 @@ class Listener {
         this._connection.sendMsg(
           this._topic,
           accepted ? C.ACTIONS.LISTEN_ACCEPT : C.ACTIONS.LISTEN_REJECT,
-          [this._pattern, provider.name],
+          [this._pattern, provider.key],
         )
 
         provider.version = null
@@ -157,7 +157,7 @@ class Listener {
             if (provider.version !== version) {
               provider.version = version
               this._connection.sendMsg(C.TOPIC.RECORD, C.ACTIONS.UPDATE, [
-                provider.name,
+                provider.key,
                 version,
                 body,
               ])

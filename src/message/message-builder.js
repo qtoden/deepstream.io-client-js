@@ -1,8 +1,8 @@
-import * as C from '../constants/constants.js'
+const C = require('../constants/constants')
 
 const SEP = C.MESSAGE_PART_SEPERATOR
 
-export function getMsg(topic, action, data) {
+module.exports.getMsg = function (topic, action, data) {
   if (data && !(data instanceof Array)) {
     throw new Error('data must be an array')
   }
@@ -22,7 +22,7 @@ export function getMsg(topic, action, data) {
   return sendData.join(SEP)
 }
 
-export function typed(value) {
+module.exports.typed = function (value) {
   const type = typeof value
 
   if (type === 'string') {

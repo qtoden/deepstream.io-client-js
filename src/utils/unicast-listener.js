@@ -1,8 +1,9 @@
 import * as C from '../constants/constants.js'
-import * as rxjs from 'rxjs'
+import rx from 'rxjs/operators'
+import rxjs from 'rxjs'
 
 const PIPE = rxjs.pipe(
-  rxjs.map((value) => {
+  rx.map((value) => {
     let data
     if (value && typeof value === 'string') {
       if (value.charAt(0) !== '{' && value.charAt(0) !== '[') {
@@ -17,7 +18,7 @@ const PIPE = rxjs.pipe(
 
     return data
   }),
-  rxjs.distinctUntilChanged(),
+  rx.distinctUntilChanged(),
 )
 
 class Listener {

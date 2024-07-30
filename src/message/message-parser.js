@@ -1,4 +1,4 @@
-import * as C from '../constants/constants.js'
+const C = require('../constants/constants')
 
 const MessageParser = function () {
   this._actions = this._getActions()
@@ -88,4 +88,4 @@ MessageParser.prototype.parseMessage = function (message, client, result) {
   result.data = parts.splice(2)
 }
 
-export default new MessageParser()
+module.exports = new MessageParser()

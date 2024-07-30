@@ -1,14 +1,13 @@
-import * as utils from '../utils/utils.js'
-import messageParser from './message-parser.js'
-import * as messageBuilder from './message-builder.js'
-import * as C from '../constants/constants.js'
-import xxhash from 'xxhash-wasm'
-import FixedQueue from '../utils/fixed-queue.js'
-import Emitter from 'component-emitter2'
-
-const HASHER = await xxhash()
-const NodeWebSocket = utils.isNode ? await import('ws').then((x) => x.default) : null
 const BrowserWebSocket = globalThis.WebSocket || globalThis.MozWebSocket
+const utils = require('../utils/utils')
+const NodeWebSocket = utils.isNode ? require('ws') : null
+const messageParser = require('./message-parser')
+const messageBuilder = require('./message-builder')
+const C = require('../constants/constants')
+const pkg = require('../../package.json')
+const xxhash = require('xxhash-wasm')
+const FixedQueue = require('../utils/fixed-queue')
+const Emitter = require('component-emitter2')
 
 const Connection = function (client, url, options) {
   this._client = client
@@ -40,9 +39,11 @@ const Connection = function (client, url, options) {
 
   this._state = C.CONNECTION_STATE.CLOSED
 
-  this.hasher = HASHER
-
-  this._createEndpoint()
+  this.hasher = null
+  xxhash().then((hasher) => {
+    this.hasher = hasher
+    this._createEndpoint()
+  })
 }
 
 Emitter(Connection.prototype)
@@ -86,30 +87,25 @@ Connection.prototype.close = function () {
   this._endpoint?.close()
 
   if (this._reconnectTimeout) {
-    globalThis.clearTimeout(this._reconnectTimeout)
+    clearTimeout(this._reconnectTimeout)
     this._reconnectTimeout = null
   }
 }
 
 Connection.prototype._createEndpoint = function () {
-  if (utils.isNode) {
-    this._endpoint = new NodeWebSocket(this._url, {
-      generateMask() {},
-    })
-  } else {
-    this._endpoint = new BrowserWebSocket(this._url)
-    this._endpoint.binaryType = 'arraybuffer'
-  }
+  this._endpoint = NodeWebSocket
+    ? new NodeWebSocket(this._url, {
+        generateMask() {},
+      })
+    : new BrowserWebSocket(this._url)
   this._corked = false
 
   this._endpoint.onopen = this._onOpen.bind(this)
   this._endpoint.onerror = this._onError.bind(this)
   this._endpoint.onclose = this._onClose.bind(this)
-
-  const decoder = new TextDecoder()
-  this._endpoint.onmessage = ({ data }) => {
-    this._onMessage(typeof data === 'string' ? data : decoder.decode(data))
-  }
+  this._endpoint.onmessage = BrowserWebSocket
+    ? ({ data }) => this._onMessage(typeof data === 'string' ? data : Buffer.from(data).toString())
+    : ({ data }) => this._onMessage(typeof data === 'string' ? data : data.toString())
 }
 
 Connection.prototype.send = function (message) {
@@ -136,7 +132,7 @@ Connection.prototype.send = function (message) {
   if (this._endpoint._socket && !this._corked) {
     this._endpoint._socket.cork()
     this._corked = true
-    globalThis.setTimeout(() => {
+    setTimeout(() => {
       this._endpoint._socket.uncork()
       this._corked = false
     }, 1)
@@ -170,7 +166,7 @@ Connection.prototype._sendAuthParams = function () {
   this._setState(C.CONNECTION_STATE.AUTHENTICATING)
   const authMessage = messageBuilder.getMsg(C.TOPIC.AUTH, C.ACTIONS.REQUEST, [
     this._authParams,
-    '26.0.0',
+    pkg.version,
     utils.isNode
       ? `Node/${process.version}`
       : globalThis.navigator && globalThis.navigator.userAgent,
@@ -243,6 +239,10 @@ Connection.prototype._recvMessages = function (deadline) {
 
     if (message.length <= 2) {
       continue
+    }
+
+    if (this._logger) {
+      this._logger.trace(message, 'receive')
     }
 
     messageParser.parseMessage(message, this._client, this._message)
@@ -366,4 +366,4 @@ Connection.prototype._clearReconnect = function () {
   this._reconnectionAttempt = 0
 }
 
-export default Connection
+module.exports = Connection
