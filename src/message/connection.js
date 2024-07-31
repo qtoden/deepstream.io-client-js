@@ -2,6 +2,7 @@ import * as utils from '../utils/utils.js'
 import * as messageParser from './message-parser.js'
 import * as messageBuilder from './message-builder.js'
 import * as C from '../constants/constants.js'
+import xxhash from 'xxhash-wasm'
 import FixedQueue from '../utils/fixed-queue.js'
 import Emitter from 'component-emitter2'
 
@@ -37,6 +38,12 @@ export default function Connection(client, url, options) {
   this._url = new URL(url)
 
   this._state = C.CONNECTION_STATE.CLOSED
+
+  this.hasher = null
+  xxhash().then((hasher) => {
+    this.hasher = hasher
+    this._createEndpoint()
+  })
 }
 
 Emitter(Connection.prototype)
@@ -159,7 +166,7 @@ Connection.prototype._sendAuthParams = function () {
   this._setState(C.CONNECTION_STATE.AUTHENTICATING)
   const authMessage = messageBuilder.getMsg(C.TOPIC.AUTH, C.ACTIONS.REQUEST, [
     this._authParams,
-    '26.0.22',
+    '26.0.0',
     utils.isNode
       ? `Node/${process.version}`
       : globalThis.navigator && globalThis.navigator.userAgent,
