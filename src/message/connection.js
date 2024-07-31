@@ -104,7 +104,8 @@ Connection.prototype._createEndpoint = function () {
   this._endpoint.onopen = this._onOpen.bind(this)
   this._endpoint.onerror = this._onError.bind(this)
   this._endpoint.onclose = this._onClose.bind(this)
-  this._endpoint.onmessage = ({ data }) => this._onMessage(this._decoder.decode(data))
+  this._endpoint.onmessage = ({ data }) =>
+    this._onMessage(typeof data === 'string' ? data : this._decoder.decode(data))
 }
 
 Connection.prototype.send = function (message) {
