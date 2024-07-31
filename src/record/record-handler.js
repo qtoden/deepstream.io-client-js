@@ -2,12 +2,11 @@ import Record from './record.js'
 import MulticastListener from '../utils/multicast-listener.js'
 import UnicastListener from '../utils/unicast-listener.js'
 import * as C from '../constants/constants.js'
-import rxjs from 'rxjs'
+import * as rxjs from 'rxjs'
 import invariant from 'invariant'
 import EventEmitter from 'component-emitter2'
 import jsonPath from '@nxtedition/json-path'
 import * as utils from '../utils/utils.js'
-import rx from 'rxjs/operators'
 import xuid from 'xuid'
 import * as timers from '../utils/timers.js'
 
@@ -472,7 +471,7 @@ class RecordHandler {
       // TODO (fix): Missing sync..
       return new Promise((resolve, reject) => {
         this.observe(...args)
-          .pipe(rx.first())
+          .pipe(rxjs.first())
           .subscribe({
             next: resolve,
             error: reject,
@@ -488,7 +487,7 @@ class RecordHandler {
   get2(...args) {
     return new Promise((resolve, reject) => {
       this.observe2(...args)
-        .pipe(rx.first())
+        .pipe(rxjs.first())
         .subscribe({
           next: resolve,
           error: reject,
