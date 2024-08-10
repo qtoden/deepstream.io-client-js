@@ -4,6 +4,7 @@ import * as messageBuilder from './message-builder.js'
 import * as C from '../constants/constants.js'
 import FixedQueue from '../utils/fixed-queue.js'
 import Emitter from 'component-emitter2'
+import pkg from '../../package.json' with { type: 'json' }
 
 const NodeWebSocket = utils.isNode ? await import('ws').then((x) => x.default) : null
 const BrowserWebSocket = globalThis.WebSocket || globalThis.MozWebSocket
@@ -166,7 +167,7 @@ Connection.prototype._sendAuthParams = function () {
   this._setState(C.CONNECTION_STATE.AUTHENTICATING)
   const authMessage = messageBuilder.getMsg(C.TOPIC.AUTH, C.ACTIONS.REQUEST, [
     this._authParams,
-    '25.6.1',
+    pkg.version,
     utils.isNode
       ? `Node/${process.version}`
       : globalThis.navigator && globalThis.navigator.userAgent,
@@ -227,7 +228,6 @@ Connection.prototype._onMessage = function (data) {
 Connection.prototype._recvMessages = function (deadline) {
   for (
     let n = 0;
-    // eslint-disable-next-line no-unmodified-loop-condition
     deadline ? deadline.didTimeout || deadline.timeRemaining() : n < this._batchSize;
     ++n
   ) {

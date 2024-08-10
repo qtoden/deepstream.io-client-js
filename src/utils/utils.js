@@ -129,7 +129,7 @@ function defaultSchedule(fn) {
   setTimeout(fn, 0)
 }
 
-export const schedule = isNode ? defaultSchedule : window.requestIdleCallback
+export const schedule = isNode ? defaultSchedule : globalThis.requestIdleCallback
 
 const abortSignals = new WeakMap()
 const onAbort = function () {

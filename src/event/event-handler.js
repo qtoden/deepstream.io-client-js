@@ -79,7 +79,7 @@ EventHandler.on = function (name, callback) {
 EventHandler.once = function (name, callback) {
   const fn = (...args) => {
     this.unsubscribe(fn)
-    callback(...args) // eslint-disable-line
+    callback(...args)
   }
   this.subscribe(name, fn)
   return this
