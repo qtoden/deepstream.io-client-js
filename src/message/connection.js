@@ -6,7 +6,7 @@ import FixedQueue from '../utils/fixed-queue.js'
 import Emitter from 'component-emitter2'
 import pkg from '../../package.json' with { type: 'json' }
 
-const NodeWebSocket = utils.isNode ? await import('ws').then((x) => x.default) : null
+let NodeWebSocket = null
 const BrowserWebSocket = globalThis.WebSocket || globalThis.MozWebSocket
 
 export default function Connection(client, url, options) {
@@ -91,6 +91,16 @@ Connection.prototype.close = function () {
 
 Connection.prototype._createEndpoint = function () {
   if (utils.isNode) {
+    // This is a hack to avoid top-level await
+    // const HASHER = await xxhash()
+    if (!NodeWebSocket) {
+      import('ws').then(({ default: WebSocket }) => {
+        NodeWebSocket = WebSocket
+        this._createEndpoint()
+      })
+      return
+    }
+
     this._endpoint = new NodeWebSocket(this._url, {
       generateMask() {},
     })
@@ -123,6 +133,10 @@ Connection.prototype.send = function (message) {
     return false
   }
 
+  if (!this._endpoint) {
+    return false
+  }
+
   if (
     this._state !== C.CONNECTION_STATE.OPEN ||
     this._endpoint.readyState !== this._endpoint.OPEN
@@ -140,6 +154,7 @@ Connection.prototype.send = function (message) {
   }
 
   this.emit('send', message)
+
   this._endpoint.send(message)
 
   return true
@@ -152,7 +167,7 @@ Connection.prototype._submit = function (message) {
     const err = new Error(`Packet to big: ${message.length} > ${maxPacketSize}`)
     this._client._$onError(C.TOPIC.CONNECTION, C.EVENT.CONNECTION_ERROR, err)
     return false
-  } else if (this._endpoint.readyState === this._endpoint.OPEN) {
+  } else if (this._endpoint != null && this._endpoint.readyState === this._endpoint.OPEN) {
     this.emit('send', message)
     this._endpoint.send(message)
     return true

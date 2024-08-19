@@ -177,7 +177,10 @@ export function removeAbortListener(signal, handler) {
   }
 }
 
-const HASHER = await xxhash()
+// This is a hack to avoid top-level await
+// const HASHER = await xxhash()
+let HASHER
+xxhash().then((hasher) => (HASHER = hasher))
 
 export function h64ToString(str) {
   return HASHER.h64ToString(str)
