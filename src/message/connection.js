@@ -5,8 +5,8 @@ import * as C from '../constants/constants.js'
 import FixedQueue from '../utils/fixed-queue.js'
 import Emitter from 'component-emitter2'
 import pkg from '../../package.json' with { type: 'json' }
+import NodeWebSocket from 'ws'
 
-let NodeWebSocket = null
 const BrowserWebSocket = globalThis.WebSocket || globalThis.MozWebSocket
 
 export default function Connection(client, url, options) {
@@ -91,16 +91,6 @@ Connection.prototype.close = function () {
 
 Connection.prototype._createEndpoint = function () {
   if (utils.isNode) {
-    // This is a hack to avoid top-level await
-    // const HASHER = await xxhash()
-    if (!NodeWebSocket) {
-      import('ws').then(({ default: WebSocket }) => {
-        NodeWebSocket = WebSocket
-        this._createEndpoint()
-      })
-      return
-    }
-
     this._endpoint = new NodeWebSocket(this._url, {
       generateMask() {},
     })
