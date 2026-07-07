@@ -786,16 +786,16 @@ class RecordHandler {
     this._syncQueues.set(type, queue)
 
     // TODO (fix): timeout?
-    setTimeout(() => {
+    const schedule = this._options?.syncSchedule ?? ((fn) => setTimeout(fn, 1))
+    schedule(() => {
       this._syncQueues.delete(type)
-
       // Token must be universally unique until deepstream properly separates
       // sync requests from different sockets.
       const token = xuid()
 
       this._syncMap.set(token, { queue, type })
       this._connection.sendMsg(C.TOPIC.RECORD, C.ACTIONS.SYNC, type ? [token, type] : [token])
-    }, 1)
+    })
   }
 }
 

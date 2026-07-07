@@ -7,4 +7,6 @@ export default {
   priority: 0,
   schedule: null,
   logger: null,
+  createConnection: null,
+  syncSchedule: null,
 }
