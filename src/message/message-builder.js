@@ -14,7 +14,7 @@ export function getMsg(topic, action, data, binary) {
 
   if (binary) {
     let headerSize = 0
-    let estimatedSize = 0
+    let estimatedSize = topic.length + action.length + 1
 
     // Estimate headerSize
     if (data) {
@@ -29,11 +29,14 @@ export function getMsg(topic, action, data, binary) {
       // Allow extra space for some multi chars here and there...
       headerSize += 2
 
-      estimatedSize += headerSize + topic.length + action.length + 2 // +2 for the topic and action separators
+      estimatedSize += headerSize + 1
     }
 
-    if (!poolBuf || poolBuf.byteLength - poolPos < estimatedSize * 2) {
-      poolLen = Math.max(poolLen, estimatedSize * 2)
+    // Give the common one-byte payload 50% headroom. Wider UTF-8 values retry
+    // below instead of making every message reserve the worst case.
+    const estimatedCapacity = Math.ceil((estimatedSize * 3) / 2)
+    if (!poolBuf || poolBuf.byteLength - poolPos < estimatedCapacity) {
+      poolLen = Math.max(poolLen, estimatedCapacity)
       poolBuf = Buffer.allocUnsafeSlow(poolLen)
       poolPos = 0
     }
@@ -78,7 +81,13 @@ export function getMsg(topic, action, data, binary) {
         const len = poolBuf.write(data[i], dataPos)
         dataPos += len
 
-        if (dataPos >= poolPos + poolBuf.byteLength) {
+        // Buffer.write() stops before a partial UTF-8 sequence, leaving at
+        // most three bytes unused when the destination is too small. Only pay
+        // for an exact byte-length scan on that rare boundary case.
+        if (
+          poolBuf.byteLength - dataPos < 4 &&
+          (i + 1 < data.length || len !== Buffer.byteLength(data[i]))
+        ) {
           poolLen *= poolPos === 0 ? 2 : 1
           poolBuf = null
           poolPos = 0
