@@ -119,7 +119,7 @@ class RecordHandler {
       destroyed: 0,
     }
 
-    this._syncQueue = []
+    this._syncQueues = new Map()
     this._syncMap = new Map()
 
     this.set = this.set.bind(this)
@@ -276,6 +276,8 @@ class RecordHandler {
 
     const signal = opts?.signal
     const timeout = opts?.timeout ?? 10 * 60e3
+
+    signal?.throwIfAborted()
 
     let disposers
     try {
@@ -766,12 +768,6 @@ class RecordHandler {
   }
 
   _sync(callback, type, opaque) {
-    this._syncQueue.push(callback, opaque)
-
-    if (this._syncQueue.length > 2) {
-      return
-    }
-
     if (type == null) {
       type = null
     } else if (type === true) {
@@ -780,12 +776,22 @@ class RecordHandler {
       throw new Error(`invalid sync type: ${type}`)
     }
 
+    let queue = this._syncQueues.get(type)
+    if (queue) {
+      queue.push(callback, opaque)
+      return
+    }
+
+    queue = [callback, opaque]
+    this._syncQueues.set(type, queue)
+
     // TODO (fix): timeout?
     setTimeout(() => {
+      this._syncQueues.delete(type)
+
       // Token must be universally unique until deepstream properly separates
       // sync requests from different sockets.
       const token = xuid()
-      const queue = this._syncQueue.splice(0)
 
       this._syncMap.set(token, { queue, type })
       this._connection.sendMsg(C.TOPIC.RECORD, C.ACTIONS.SYNC, type ? [token, type] : [token])
