@@ -1,5 +1,12 @@
 import type DsRecord from './record/record.js'
-import type { Paths, Get, UpdateOptions, WhenOptions, ObserveOptions } from './record/record.js'
+import type {
+  Paths,
+  Get,
+  ReadonlyDeep,
+  UpdateOptions,
+  WhenOptions,
+  ObserveOptions,
+} from './record/record.js'
 import type RecordHandler from './record/record-handler.js'
 import type { RecordStats, ProvideOptions, SyncOptions } from './record/record-handler.js'
 import type EventHandler from './event/event-handler.js'
@@ -49,6 +56,7 @@ export type {
   SyncOptions,
   Paths,
   Get,
+  ReadonlyDeep,
   UpdateOptions,
   WhenOptions,
   ObserveOptions,

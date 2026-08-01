@@ -27,6 +27,7 @@ import type {
   DsRecord,
   EventHandler,
   Get,
+  ReadonlyDeep,
   RecordHandler,
   RpcHandler,
 } from '../client.js'
@@ -44,7 +45,8 @@ import { BehaviorSubject, firstValueFrom, Observable, Subscription } from 'rxjs'
 import * as rxjs from 'rxjs'
 import type RpcResponse from '../rpc/rpc-response.js'
 
-type Lookup<Table, Key> = Key extends keyof Table ? Table[Key] : unknown
+type RawLookup<Table, Key> = Key extends keyof Table ? Table[Key] : unknown
+type Lookup<Table, Key> = ReadonlyDeep<RawLookup<Table, Key>>
 
 const EMPTY = Object.freeze({})
 const EMPTY_ARR = Object.freeze([])
@@ -915,7 +917,7 @@ export class MockRecordHandler<
 
   // --------------- getRecord ---------------
 
-  getRecord<Name extends string, Data = Lookup<Records, Name>>(name: Name): DsRecord<Data> {
+  getRecord<Name extends string, Data = RawLookup<Records, Name>>(name: Name): DsRecord<Data> {
     if (typeof name !== 'string' || name.length === 0) {
       throw new Error('invalid argument: name')
     }
@@ -926,7 +928,7 @@ export class MockRecordHandler<
 
   // --------------- put ---------------
 
-  put(name: string, version: string, data: Record<string, unknown> | null): void {
+  put(name: string, version: string, data: ReadonlyDeep<Record<string, unknown>> | null): void {
     // Same validation as the real put (record-handler.js:415-430).
     if (typeof name !== 'string' || name.startsWith('_')) {
       throw new Error('invalid argument: name')
@@ -1393,7 +1395,7 @@ export class MockRecord<Data = unknown> implements DsRecord<Data> {
     // numeric versions go back to SERVER (record.js:550-567).
     const state = this.version.charAt(0) === 'I' ? STALE : SERVER
     if (this.state !== state) {
-      this.subject.next({ state, data: this.data })
+      this.subject.next({ state, data: this.subject.getValue().data })
     }
   }
 
@@ -1407,8 +1409,8 @@ export class MockRecord<Data = unknown> implements DsRecord<Data> {
     this.unref()
   }
 
-  get data(): Data {
-    return this.subject.getValue().data
+  get data(): ReadonlyDeep<Data> {
+    return this.subject.getValue().data as ReadonlyDeep<Data>
   }
 
   get state(): number {
@@ -1426,7 +1428,7 @@ export class MockRecord<Data = unknown> implements DsRecord<Data> {
   }
 
   setState(state: number, data?: Data): void {
-    this.subject.next({ state, data: data !== undefined ? data : this.data })
+    this.subject.next({ state, data: data !== undefined ? data : this.subject.getValue().data })
   }
 
   subscribe(
@@ -1465,9 +1467,10 @@ export class MockRecord<Data = unknown> implements DsRecord<Data> {
     return this as unknown as DsRecord<Data>
   }
 
-  get<P extends string | string[]>(path: P): Get<Data, P>
-  get<R>(fn: (data: Data) => R): R
-  get(): Data
+  get<P extends string | readonly string[]>(path: P): ReadonlyDeep<Get<Data, P>>
+  get<R>(fn: (data: ReadonlyDeep<Data>) => R): R
+  get(): ReadonlyDeep<Data>
+  get(path: undefined | string | readonly string[]): unknown
   get(path?: unknown): unknown {
     // Same argument handling as the real get (record.js:184-194).
     if (!path) {
@@ -1475,14 +1478,17 @@ export class MockRecord<Data = unknown> implements DsRecord<Data> {
     } else if (typeof path === 'string' || Array.isArray(path)) {
       return jsonPath.get(this.data, path)
     } else if (typeof path === 'function') {
-      return (path as (data: Data) => unknown)(this.data)
+      return (path as (data: ReadonlyDeep<Data>) => unknown)(this.data)
     } else {
       throw new Error('invalid argument: path')
     }
   }
 
-  set(data: Data): void
-  set<P extends string>(path: P, data: Get<Data, P>): void
+  set(data: ReadonlyDeep<Data>): void
+  set<P extends string | readonly string[]>(
+    path: P,
+    data: unknown extends Get<Data, P> ? never : ReadonlyDeep<Get<Data, P>>,
+  ): void
   set(pathOrData: unknown, dataOrNil?: unknown): void {
     // Real: I-versioned (provider) records and '_'-names cannot be set —
     // USER_ERROR 'cannot set', which throws without an 'error' listener
@@ -1527,14 +1533,17 @@ export class MockRecord<Data = unknown> implements DsRecord<Data> {
   }
 
   // Real client passes version as second argument to the updater
-  update(updater: (data: Data, version: string) => Data, options?: UpdateOptions): Promise<void>
-  update<P extends string>(
+  update(
+    updater: (data: ReadonlyDeep<Data>, version: string) => ReadonlyDeep<Data>,
+    options?: UpdateOptions,
+  ): Promise<void>
+  update<P extends string | readonly string[]>(
     path: P,
-    updater: (data: Get<Data, P>, version: string) => Get<Data, P>,
+    updater: (data: ReadonlyDeep<Get<Data, P>>, version: string) => ReadonlyDeep<Get<Data, P>>,
     options?: UpdateOptions,
   ): Promise<void>
   async update(
-    pathOrUpdater: string | string[] | ((...args: never[]) => unknown),
+    pathOrUpdater: string | readonly string[] | ((...args: never[]) => unknown),
     updaterOrOptions?: UpdateOptions | ((...args: never[]) => unknown),
     optionsOrNil?: UpdateOptions,
   ): Promise<void> {
@@ -1568,7 +1577,9 @@ export class MockRecord<Data = unknown> implements DsRecord<Data> {
 
     await this.when(SERVER, options)
 
-    const prev = path ? jsonPath.get(this.data, path) : (this.data as unknown)
+    const prev = path
+      ? jsonPath.get(this.data, typeof path === 'string' ? path : [...path])
+      : (this.data as unknown)
     const next = (updater as (data: unknown, version: string) => unknown)(prev, this.version)
 
     // Real: only write when something changed, and never write a nullish
@@ -1577,7 +1588,7 @@ export class MockRecord<Data = unknown> implements DsRecord<Data> {
       if (path) {
         ;(this.set as (p: unknown, d: unknown) => void)(path, next)
       } else {
-        this.set(next as Data)
+        this.set(next as ReadonlyDeep<Data>)
       }
     }
   }

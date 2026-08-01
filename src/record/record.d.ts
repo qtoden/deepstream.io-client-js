@@ -1,6 +1,6 @@
 import type RecordHandler from './record-handler.js'
-import type { Get as _Get, AllUnionFields } from 'type-fest'
-export type { Paths } from 'type-fest'
+import type { Get as _Get, AllUnionFields, ReadonlyDeep } from 'type-fest'
+export type { Paths, ReadonlyDeep } from 'type-fest'
 
 // HACK: Wrap type-fest's Get to get rid of EmptyObject from union
 type RemoveSymbolKeys<T> = {
@@ -32,7 +32,9 @@ export interface ObserveOptions {
   sync?: boolean
 }
 
-export interface ObserveOptionsWithPath<Path extends string | string[]> extends ObserveOptions {
+export interface ObserveOptionsWithPath<
+  Path extends string | readonly string[],
+> extends ObserveOptions {
   path?: Path
 }
 
@@ -41,7 +43,7 @@ export default class Record<Data = unknown> {
 
   readonly name: string
   readonly version: string
-  readonly data: Data
+  readonly data: ReadonlyDeep<Data>
   readonly state: number
   readonly refs: number
 
@@ -59,22 +61,22 @@ export default class Record<Data = unknown> {
 
   get: {
     // with path
-    <P extends string | string[]>(path: P): Get<Data, P>
+    <P extends string | readonly string[]>(path: P): ReadonlyDeep<Get<Data, P>>
     // with function mapper
-    <R>(fn: (data: Data) => R): R
+    <R>(fn: (data: ReadonlyDeep<Data>) => R): R
     // without path
-    (): Data
-    (path: undefined | string | string[]): unknown
+    (): ReadonlyDeep<Data>
+    (path: undefined | string | readonly string[]): unknown
   }
 
   set: {
     // with path
     <P extends string | readonly string[]>(
       path: P,
-      dataAtPath: unknown extends Get<Data, P> ? never : Get<Data, P>,
+      dataAtPath: unknown extends Get<Data, P> ? never : ReadonlyDeep<Get<Data, P>>,
     ): void
     // without path
-    (data: Data): void
+    (data: ReadonlyDeep<Data>): void
   }
 
   when: {
@@ -86,13 +88,16 @@ export default class Record<Data = unknown> {
   update: {
     // without path
     (
-      updater: (data: Readonly<Data>, version: string) => Data,
+      updater: (data: ReadonlyDeep<Data>, version: string) => ReadonlyDeep<Data>,
       options?: UpdateOptions,
     ): Promise<void>
     // with path
-    <P extends string | string[]>(
+    <P extends string | readonly string[]>(
       path: P,
-      updater: (dataAtPath: Readonly<Get<Data, P>>, version: string) => Get<Data, P>,
+      updater: (
+        dataAtPath: ReadonlyDeep<Get<Data, P>>,
+        version: string,
+      ) => ReadonlyDeep<Get<Data, P>>,
       options?: UpdateOptions,
     ): Promise<void>
   }

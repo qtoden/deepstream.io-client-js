@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import make, { type DeepstreamClient, type DeepstreamError } from './client.js'
+import make, { type DeepstreamClient, type DeepstreamError, type ReadonlyDeep } from './client.js'
 import { expectAssignable, expectError, expectType } from 'tsd'
 import type { Observable } from 'rxjs'
 import type { EmptyObject } from 'type-fest'
 
 interface Records extends Record<string, unknown> {
+  immutable: ImmutableRecord
   o: {
     o0?: {
       o1?: {
@@ -47,6 +48,13 @@ interface Records extends Record<string, unknown> {
   }
 }
 
+interface ImmutableRecord {
+  values: string[]
+  nested: {
+    value: string
+  }
+}
+
 interface Circular {
   a: {
     b0: Circular
@@ -55,6 +63,46 @@ interface Circular {
 }
 
 const ds = make<Records>('')
+
+// Record reads expose the shared record data as deeply readonly.
+const immutableData = await ds.record.get('immutable')
+expectType<ReadonlyDeep<ImmutableRecord>>(immutableData)
+expectError(immutableData.values.push('changed'))
+expectError((immutableData.nested.value = 'changed'))
+
+const immutableValues = await ds.record.get('immutable', 'values')
+expectType<readonly string[]>(immutableValues)
+expectError(immutableValues.push('changed'))
+
+const immutableSnapshot = await ds.record.get2('immutable')
+expectType<ReadonlyDeep<ImmutableRecord>>(immutableSnapshot.data)
+expectError(immutableSnapshot.data.values.push('changed'))
+
+const immutableAsyncRead = ds.record.getAsync('immutable')
+if (immutableAsyncRead.async) {
+  expectType<ReadonlyDeep<ImmutableRecord>>(await immutableAsyncRead.value)
+} else {
+  expectType<ReadonlyDeep<ImmutableRecord>>(immutableAsyncRead.value)
+}
+
+ds.record.observe('immutable').subscribe((data) => {
+  expectType<ReadonlyDeep<ImmutableRecord>>(data)
+  expectError(data.values.push('changed'))
+})
+
+ds.record.observe2('immutable').subscribe((snapshot) => {
+  expectType<ReadonlyDeep<ImmutableRecord>>(snapshot.data)
+  expectError(snapshot.data.values.push('changed'))
+})
+
+ds.record.update('immutable', (data) => {
+  expectType<ReadonlyDeep<ImmutableRecord>>(data)
+  expectError(data.values.push('changed'))
+  return data
+})
+
+// Readonly results remain valid write inputs.
+ds.record.set('immutable', immutableData)
 
 // Test that make() returns DeepstreamClient with appropriate generics
 expectAssignable<DeepstreamClient>(make(''))
@@ -209,6 +257,22 @@ expectAssignable<string | undefined>(await ds.record.get('c', 'a.b1'))
 const rec = ds.record.getRecord('o')
 rec.set({ o0: {} })
 
+const immutableRecord = ds.record.getRecord('immutable')
+expectType<ReadonlyDeep<ImmutableRecord>>(immutableRecord.data)
+expectError(immutableRecord.data.values.push('changed'))
+expectType<ReadonlyDeep<ImmutableRecord>>(immutableRecord.get())
+expectType<readonly string[]>(immutableRecord.get('values'))
+immutableRecord.get((data) => {
+  expectType<ReadonlyDeep<ImmutableRecord>>(data)
+  expectError(data.values.push('changed'))
+})
+immutableRecord.update((data) => {
+  expectType<ReadonlyDeep<ImmutableRecord>>(data)
+  expectError(data.values.push('changed'))
+  return data
+})
+immutableRecord.set(immutableData)
+
 rec.update('o0', (x) => ({ ...x, o1: {} }))
 expectError(rec.set('o0.x1', {}))
 rec.set('o0.o1', {})
@@ -216,7 +280,7 @@ expectError(rec.update((x) => 'x'))
 expectError(rec.update('o0', (x) => ({ ...x, o1: '22' })))
 
 expectType<string | undefined>(rec.get('o0.o1.o2.o3'))
-expectType<{ o0?: { o1?: { o2?: { o3?: string } } } }>(rec.get())
+expectType<ReadonlyDeep<Records['o']>>(rec.get())
 const pathOrUndefined: 'o0.01.02.03' | undefined = undefined
 expectType<unknown>(rec.get(pathOrUndefined))
 

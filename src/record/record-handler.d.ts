@@ -1,8 +1,10 @@
 import type { Observable } from 'rxjs'
+import type { ReadonlyDeep } from 'type-fest'
 import type DsRecord from './record.js'
 import type { Get, UpdateOptions, ObserveOptions, ObserveOptionsWithPath } from './record.js'
 
-type Lookup<Table, Name> = Name extends keyof Table ? Table[Name] : unknown
+type RawLookup<Table, Name> = Name extends keyof Table ? Table[Name] : unknown
+type Lookup<Table, Name> = ReadonlyDeep<RawLookup<Table, Name>>
 
 export default class RecordHandler<Records = Record<string, unknown>> {
   VOID: 0
@@ -29,7 +31,7 @@ export default class RecordHandler<Records = Record<string, unknown>> {
   connected: boolean
   stats: RecordStats
 
-  getRecord<Name extends string, Data = Lookup<Records, Name>>(name: Name): DsRecord<Data>
+  getRecord<Name extends string, Data = RawLookup<Records, Name>>(name: Name): DsRecord<Data>
 
   provide: (
     pattern: string,
@@ -40,7 +42,7 @@ export default class RecordHandler<Records = Record<string, unknown>> {
   put: (
     name: string,
     version: string,
-    data: Record<string, unknown> | null,
+    data: ReadonlyDeep<Record<string, unknown>> | null,
     parent?: string,
   ) => void
 
