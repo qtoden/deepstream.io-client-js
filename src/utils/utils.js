@@ -177,7 +177,7 @@ export function h64ToString(str) {
   return HASHER.h64ToString(str)
 }
 
-export function findBigIntPaths(obj, path = '') {
+export function findBigIntPaths(obj, path = '', seen = new WeakSet()) {
   const paths = []
 
   if (typeof obj === 'bigint') {
@@ -185,9 +185,15 @@ export function findBigIntPaths(obj, path = '') {
   }
 
   if (typeof obj === 'object' && obj !== null) {
-    for (const key of Object.keys(obj)) {
-      paths.push(...findBigIntPaths(obj[key], path ? `${path}.${key}` : key))
+    if (seen.has(obj)) {
+      return paths
     }
+    seen.add(obj)
+
+    for (const key of Object.keys(obj)) {
+      paths.push(...findBigIntPaths(obj[key], path ? `${path}.${key}` : key, seen))
+    }
+    seen.delete(obj)
   }
 
   return paths

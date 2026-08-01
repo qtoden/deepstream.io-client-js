@@ -412,6 +412,45 @@ describe('LegacyListener', async () => {
       assert.equal(client.errors.length, 1)
       assert.ok(String(client.errors[0].err).includes('invalid value'))
     })
+
+    it('reports BigInt paths without recursing forever on circular values', async () => {
+      const connection = createMockConnection(true)
+      const client = createMockClient()
+      const handler = createMockHandler(connection, client)
+      const rxjs = await import('rxjs')
+      const subject = new rxjs.Subject()
+      const value = { count: 1n }
+      value.self = value
+
+      const listener = new Listener(C.TOPIC.RECORD, 'test/.*', () => subject, handler)
+      listener._$onMessage(msg(C.ACTIONS.SUBSCRIPTION_FOR_PATTERN_FOUND, ['test/.*', 'test/1']))
+      await new Promise((resolve) => queueMicrotask(resolve))
+      listener._$onMessage(msg(C.ACTIONS.LISTEN_ACCEPT, ['test/.*', 'test/1']))
+
+      subject.next(value)
+
+      assert.equal(client.errors.length, 1)
+      assert.deepEqual(client.errors[0].err.data.bigIntPaths, ['count'])
+    })
+
+    it('reports every path to a shared object containing BigInt values', async () => {
+      const connection = createMockConnection(true)
+      const client = createMockClient()
+      const handler = createMockHandler(connection, client)
+      const rxjs = await import('rxjs')
+      const subject = new rxjs.Subject()
+      const shared = { count: 1n }
+
+      const listener = new Listener(C.TOPIC.RECORD, 'test/.*', () => subject, handler)
+      listener._$onMessage(msg(C.ACTIONS.SUBSCRIPTION_FOR_PATTERN_FOUND, ['test/.*', 'test/1']))
+      await new Promise((resolve) => queueMicrotask(resolve))
+      listener._$onMessage(msg(C.ACTIONS.LISTEN_ACCEPT, ['test/.*', 'test/1']))
+
+      subject.next({ first: shared, second: shared })
+
+      assert.equal(client.errors.length, 1)
+      assert.deepEqual(client.errors[0].err.data.bigIntPaths, ['first.count', 'second.count'])
+    })
   })
 
   describe('provider.error - retry behavior', () => {
