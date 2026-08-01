@@ -64,6 +64,9 @@ interface Circular {
 
 const ds = make<Records>('')
 
+make('', { priority: 7 })
+expectError(make('', { priority: 'high' }))
+
 // Record reads expose the shared record data as deeply readonly.
 const immutableData = await ds.record.get('immutable')
 expectType<ReadonlyDeep<ImmutableRecord>>(immutableData)

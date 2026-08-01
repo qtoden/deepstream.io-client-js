@@ -35,6 +35,7 @@ export interface DeepstreamClientOptions {
   maxReconnectAttempts?: number
   maxPacketSize?: number
   batchSize?: number
+  priority?: number
   schedule?: ((fn: (deadline?: IdleDeadline) => void) => void) | null
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   logger?: any

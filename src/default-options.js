@@ -4,6 +4,7 @@ export default {
   maxReconnectAttempts: Infinity,
   maxPacketSize: 1024 * 1024,
   batchSize: 4096,
+  priority: 0,
   schedule: null,
   logger: null,
 }

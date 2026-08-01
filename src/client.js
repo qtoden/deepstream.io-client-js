@@ -114,16 +114,12 @@ Client.prototype._onErrorMessage = function (errorMessage) {
 }
 
 Client.prototype._getOptions = function (options) {
-  const mergedOptions = {}
-
-  for (const key in defaultOptions) {
-    if (typeof options[key] === 'undefined') {
-      mergedOptions[key] = defaultOptions[key]
-    } else {
+  const mergedOptions = { ...defaultOptions }
+  for (const key of Object.keys(defaultOptions)) {
+    if (options[key] !== undefined) {
       mergedOptions[key] = options[key]
     }
   }
-
   return mergedOptions
 }
 
