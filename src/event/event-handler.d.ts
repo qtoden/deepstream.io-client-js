@@ -6,14 +6,14 @@ export default class EventHandler {
   subscribe: (name: string, callback: (data: unknown) => void) => void
   unsubscribe: (name: string, callback?: (data: unknown) => void) => void
   on: (name: string, callback: (data: unknown) => void) => this
-  once: (name: string, callback: (data: unknown) => void) => this
+  once: (name: string, callback: (name: string, data: unknown) => void) => this
   off: (name: string, callback: (data: unknown) => void) => this
   observe: <Data>(name: string) => Observable<Data>
   emit: <Data>(name: string, data?: Data) => void
   provide: (
     pattern: string,
     callback: (name: string) => void,
-    options: EventProvideOptions,
+    options?: EventProvideOptions,
   ) => ((() => void) & Disposable) | undefined
 }
 

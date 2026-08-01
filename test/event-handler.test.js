@@ -49,6 +49,20 @@ describe('EventHandler.provide', async () => {
     assert.equal(disposer[Symbol.dispose], disposer)
   })
 
+  it('uses legacy mode when options are omitted', () => {
+    const { handler, connection } = createHandler()
+
+    const disposer = handler.provide('test/.*', () => null)
+
+    assert.equal(typeof disposer, 'function')
+    assert.equal(handler.stats.listeners, 1)
+    assert.deepEqual(connection.messages[0], {
+      topic: C.TOPIC.EVENT,
+      action: C.ACTIONS.LISTEN,
+      data: ['test/.*'],
+    })
+  })
+
   it('registers a listener and disposing removes it and sends UNLISTEN', () => {
     const { handler, connection } = createHandler()
 

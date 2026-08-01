@@ -440,15 +440,14 @@ export class MockEventHandler implements EventHandler {
     return this
   }
 
-  once(name: string, callback: (data: unknown) => void): this {
+  once(name: string, callback: (name: string, data: unknown) => void): this {
     // Mirrors the real client (event-handler.js:79-86): the wrapper passes the
     // event NAME as the first argument — `callback(name, ...args)` — and since
     // the wrapper is anonymous, off(name, callback) cannot remove a pending
-    // once() subscription. (The real implementation contradicts its own d.ts
-    // here; the mock follows the runtime behavior.)
+    // once() subscription.
     const fn = (data: unknown) => {
       this.unsubscribe(name, fn)
-      ;(callback as (name: string, data: unknown) => void)(name, data)
+      callback(name, data)
     }
     this.subscribe(name, fn)
     return this
