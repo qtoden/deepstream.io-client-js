@@ -21,27 +21,33 @@ RpcResponse.prototype.error = function (error) {
   if (this.completed) {
     throw new Error(`Rpc ${this._name} already completed`)
   }
-  this.completed = true
+
+  let message
+  try {
+    const value = error?.message ?? error
+    message = typeof value === 'string' ? value : String(value)
+  } catch {
+    message = 'unknown error'
+  }
 
   this._connection.sendMsg(C.TOPIC.RPC, C.ACTIONS.RESPONSE, [
     this._name,
     this._id,
-    error.message || error,
+    message,
     messageBuilder.typed(true),
   ])
+  this.completed = true
 }
 
 RpcResponse.prototype.send = function (data) {
   if (this.completed) {
     throw new Error(`Rpc ${this._name} already completed`)
   }
-  this.completed = true
 
-  this._connection.sendMsg(C.TOPIC.RPC, C.ACTIONS.RESPONSE, [
-    this._name,
-    this._id,
-    messageBuilder.typed(data),
-  ])
+  const typedData = messageBuilder.typed(data)
+
+  this._connection.sendMsg(C.TOPIC.RPC, C.ACTIONS.RESPONSE, [this._name, this._id, typedData])
+  this.completed = true
 }
 
 export default RpcResponse

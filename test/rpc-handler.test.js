@@ -122,4 +122,12 @@ describe('RpcHandler.provide', async () => {
     assert.equal(client.errors[0].event, C.EVENT.PROVIDER_EXISTS)
     assert.equal(handler.stats.listeners, 1)
   })
+
+  it('does not retain an RPC when request serialization fails', () => {
+    const { handler, connection } = createHandler()
+
+    assert.throws(() => handler.make('rpc/test', 1n), /Can't serialize type/)
+    assert.equal(handler.stats.rpcs, 0)
+    assert.equal(connection.messages.length, 0)
+  })
 })

@@ -97,6 +97,7 @@ RpcHandler.prototype.make = function (name, data, callback) {
     throw new Error('invalid argument callback')
   }
 
+  const typedData = messageBuilder.typed(data)
   const id = xuid()
   this._rpcs.set(id, {
     id,
@@ -104,7 +105,7 @@ RpcHandler.prototype.make = function (name, data, callback) {
     data,
     callback,
   })
-  this._connection.sendMsg(C.TOPIC.RPC, C.ACTIONS.REQUEST, [name, id, messageBuilder.typed(data)])
+  this._connection.sendMsg(C.TOPIC.RPC, C.ACTIONS.REQUEST, [name, id, typedData])
 
   return promise
 }
