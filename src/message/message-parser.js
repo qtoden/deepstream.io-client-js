@@ -2,20 +2,20 @@ import * as C from '../constants/constants.js'
 
 const actions = {}
 
-for (const key in C.ACTIONS) {
-  actions[C.ACTIONS[key]] = key
+for (const action of Object.values(C.ACTIONS)) {
+  actions[action] = true
 }
 
 export function convertTyped(value, client) {
   const type = value.charAt(0)
 
   if (type === C.TYPES.STRING) {
-    return value.substr(1)
+    return value.slice(1)
   }
 
   if (type === C.TYPES.OBJECT) {
     try {
-      return JSON.parse(value.substr(1))
+      return JSON.parse(value.slice(1))
     } catch (err) {
       client._$onError(C.TOPIC.ERROR, C.EVENT.MESSAGE_PARSE_ERROR, err)
       return undefined
@@ -23,7 +23,7 @@ export function convertTyped(value, client) {
   }
 
   if (type === C.TYPES.NUMBER) {
-    return parseFloat(value.substr(1))
+    return Number.parseFloat(value.slice(1))
   }
 
   if (type === C.TYPES.NULL) {
@@ -48,23 +48,28 @@ export function convertTyped(value, client) {
 }
 
 export function parseMessage(message, client, result) {
-  const parts = message.split(C.MESSAGE_PART_SEPERATOR)
+  const topicEnd = message.indexOf(C.MESSAGE_PART_SEPERATOR)
 
-  if (parts.length < 2) {
+  if (topicEnd === -1) {
     client._$onError(
       C.TOPIC.ERROR,
       C.EVENT.MESSAGE_PARSE_ERROR,
-      new Error('Insufficiant message parts'),
+      new Error('Insufficient message parts'),
     )
     return null
   }
 
-  if (parts[0] === C.TOPIC.ERROR) {
-    client._$onError(C.TOPIC.ERROR, parts[1], new Error('Message error'), message)
+  const actionEnd = message.indexOf(C.MESSAGE_PART_SEPERATOR, topicEnd + 1)
+  const topic = message.slice(0, topicEnd)
+  const action =
+    actionEnd === -1 ? message.slice(topicEnd + 1) : message.slice(topicEnd + 1, actionEnd)
+
+  if (topic === C.TOPIC.ERROR) {
+    client._$onError(C.TOPIC.ERROR, action, new Error('Message error'), message)
     return null
   }
 
-  if (actions[parts[1]] === undefined) {
+  if (actions[action] !== true) {
     client._$onError(
       C.TOPIC.ERROR,
       C.EVENT.MESSAGE_PARSE_ERROR,
@@ -75,7 +80,9 @@ export function parseMessage(message, client, result) {
   }
 
   result.raw = message
-  result.topic = parts[0]
-  result.action = parts[1]
-  result.data = parts.splice(2)
+  result.topic = topic
+  result.action = action
+  result.data = actionEnd === -1 ? [] : message.slice(actionEnd + 1).split(C.MESSAGE_PART_SEPERATOR)
+  result.processedError = false
+  return true
 }
